@@ -31,6 +31,7 @@ bool preDrawFunc(igl::opengl::glfw::Viewer& viewer)
     auto start = std::chrono::high_resolution_clock::now();
     world->step_euler();
     auto end = std::chrono::high_resolution_clock::now();
+    world->output_2_obj(globalstep);
     std::chrono::duration<double, std::ratio<1, 1>> duration_s(end - start);
     std::cout << "Time step " << globalstep++ << " start_time:" << start_time  << " time_cost: " << duration_s.count() << "ms" <<endl;
     for (auto& m : rope->get_masses()) viewer.data().add_points(m->position, Eigen::RowVector3d(0, 1, 0));
@@ -44,9 +45,9 @@ bool preDrawFunc(igl::opengl::glfw::Viewer& viewer)
 int main() {
     std::string mshFile = std::string(RESOURCE) + "tet.msh";
     world = new World();
-    world->set_dt(0.1);
+    world->set_dt(0.025);
     world->set_g(Eigen::RowVector2d(0, -1));
-    rope = new Rope(Eigen::RowVector2d(0, 0), Eigen::RowVector2d(200, 0),
+    rope = new Rope(Eigen::RowVector2d(0, 0), Eigen::RowVector2d(10, 0),
         3, 1, 100, vector<int>{0});
     world->set_rope(rope);
     // Plot the mesh
@@ -57,7 +58,6 @@ int main() {
     //viewer.data().set_mesh(rope->get_positions(), rope->get_index());
     viewer.data().point_size = 5;
     viewer.data().line_width = 2;
-    viewer.core().align_camera_center(rope->get_positions(), rope->get_index());
     viewer.launch();
     delete world;
     return 0;

@@ -12,8 +12,11 @@ struct Mass {
 
 	int id;
 	float mass;
+	
+	//pinned == true means this vertex cannot be moved
 	bool pinned;
 
+	
 	Eigen::RowVector2d position;
 	Eigen::RowVector2d start_position;
 	Eigen::RowVector2d last_position;

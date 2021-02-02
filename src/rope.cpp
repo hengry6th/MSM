@@ -2,6 +2,7 @@
 #include "mass.h"
 #include "spring.h"
 #include "rope.h"
+#include "output.h"
 //#include <Eigen/Core>
 
 #define kd 0.00005
@@ -11,26 +12,20 @@ using namespace std;
 
 Rope::Rope(Eigen::RowVector2d start, Eigen::RowVector2d end, int node_num, float node_mass,
 	float k, vector<int> pinned_nodes) {
+    //initialize 
 	masses = vector<Mass*>(node_num);
 	springs = vector<Spring*>(node_num - 1);
-    mass_posi.resize(node_num, 2);
-    spring_index.resize(node_num - 1, 3);
-    
+    //calculate each spring's rest_length
     Eigen::RowVector2d length = (end - start) / (node_num - 1);
+    //initialize the inite point
 	masses[0] = new Mass(0, start, node_mass, false);
-    mass_posi(0, 0) = start.x();
-    mass_posi(0, 1) = start.y();
-    //mass_posi(0, 2) = 0.0;
 	for (int i = 1; i < node_num; i++) {
+        //update the new mass vertex position
 		start += length;
+        //create new mass vertex
 		masses[i] = new Mass(i, start, node_mass, false);
-        mass_posi(i, 0) = start.x();
-        mass_posi(i, 1) = start.y();
-        //mass_posi(i, 2) = 0.0;
+        //create new spring by mass_i and mass_(i-1) 
 		springs[i - 1] = new Spring(masses[i - 1], masses[i], k);
-        spring_index(i - 1, 0) = i - 1;
-        spring_index(i - 1, 1) = i;
-        spring_index(i - 1, 2) = i;
 	}
 	for (auto& i : pinned_nodes) {
 		masses[i]->pinned = true;
@@ -60,11 +55,7 @@ void Rope::simulateEuler(float delta_t, Eigen::RowVector2d gravity) {
             m->velocity += a * delta_t;
             m->velocity *= (1 - kd);
             m->position += m->velocity * delta_t;//+ 0.5 * a * delta_t * delta_t;
-            mass_posi(m->id, 0) = m->position.x();
-            mass_posi(m->id, 1) = m->position.y();
-            double x = mass_posi(m->id, 0);
-            double y = mass_posi(m->id, 1);
-            double c = y;
+
 
         }
         // Reset all forces on each mass
@@ -79,7 +70,7 @@ void Rope::simulateVerlet(float delta_t, Eigen::RowVector2d gravity) {
         Mass* m2 = s->m2;
         Eigen::RowVector2d l = m1->position - m2->position;
         double constraint = l.norm() - s->rest_length;
-        Eigen::RowVector2d delt_s = constraint * l/l.norm();
+        Eigen::RowVector2d delt_s = constraint * l / l.norm();
         if (!m1->pinned) s->m1->position -= delt_s * m2->mass / (m1->mass + m2->mass);
         if (!m2->pinned) s->m2->position += delt_s * m1->mass / (m1->mass + m2->mass);
     }
@@ -93,9 +84,18 @@ void Rope::simulateVerlet(float delta_t, Eigen::RowVector2d gravity) {
             // update position with damp
             m->position = m->position + (1 - kd) * (m->position - m->last_position) + gravity * delta_t * delta_t;
             m->last_position = temp_position;
-            mass_posi(m->id, 0) = m->position.x();
-            mass_posi(m->id, 1) = m->position.y();
             // TODO (Part 4): Add global Verlet damping
         }
     }
 }
+void Rope::output_2_obj(int step_index) {
+        Files_in_obj f;
+        f.make_New_file(step_index);
+        for (auto& m : masses) {
+            f.add_point(m->position);
+        }
+        for (auto& s : springs) {
+            f.add_edge(s->m1->id, s->m2->id);
+        }
+        f.close_f();
+    }
